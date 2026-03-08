@@ -15,11 +15,6 @@ public class UserController {
     @Autowired
     UserServices userServices;
 
-    @GetMapping("")
-    public String test(){
-        return "Hello everyone";
-    }
-
     @PostMapping("register")
     public ResponseEntity<User> registerUser(@RequestBody User user){
         return userServices.registerUser(user);
@@ -28,5 +23,20 @@ public class UserController {
     @GetMapping("users")
     public ResponseEntity<List<User>> getUsers(){
         return userServices.getUsers();
+    }
+
+    @GetMapping("userInfo/{id}")
+    public ResponseEntity<User> getUserInfo(@PathVariable Long id){
+        return userServices.getUserInfo(id);
+    }
+
+    @PutMapping("updateUser/{id}")
+    public ResponseEntity<User> updateUser(@PathVariable Long id,@RequestBody User user){
+        return userServices.updateUser(id,user);
+    }
+
+    @DeleteMapping("deleteUser/{id}")
+    public ResponseEntity<String> deleteUser(@PathVariable Long id){
+        return userServices.deleteUser(id);
     }
 }
