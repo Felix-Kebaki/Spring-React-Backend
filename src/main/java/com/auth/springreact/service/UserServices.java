@@ -1,69 +1,77 @@
 package com.auth.springreact.service;
 
+import com.auth.springreact.exception.UserCreationException;
+import com.auth.springreact.exception.UserDeletionException;
+import com.auth.springreact.exception.UserUpdateException;
 import com.auth.springreact.model.User;
 import com.auth.springreact.repository.UserRepository;
 import com.auth.springreact.exception.UserNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
 
 
 @Service
 public class UserServices {
-    @Autowired
-    UserRepository userRepository;
 
-    public ResponseEntity<User> registerUser(User user) {
-        try {
-//            user.setPassword(passwordEncoder.encode(user.getPassword()));
-            User registered = userRepository.save(user);
-            return new ResponseEntity<>(registered, HttpStatus.CREATED);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        return new ResponseEntity<>(new User(), HttpStatus.BAD_REQUEST);
+    private final UserRepository userRepository;
+
+    public UserServices(UserRepository userRepository) {
+        this.userRepository = userRepository;
     }
 
-    public ResponseEntity<List<User>> getUsers() {
+    public User registerUser(User user) {
+//      user.setPassword(passwordEncoder.encode(user.getPassword()));
         try {
-            return new ResponseEntity<>(userRepository.findAll(), HttpStatus.OK);
-        } catch (Exception e) {
-            e.printStackTrace();
+            return userRepository.save(user);
+        }catch(Exception e){
+            throw new UserCreationException("Failed to create user");
         }
-        return new ResponseEntity<>(new ArrayList<>(), HttpStatus.NOT_FOUND);
     }
 
-    public ResponseEntity<User> getUserInfo(Long id) {
+    public List<User> getUsers() {
+        List<User> users = userRepository.findAll();
+        if (users.isEmpty()) {
+            throw new UserNotFoundException();
+        }
+        return users;
+    }
+
+    public User getUserInfo(Long id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
+    }
+
+    public User updateUser(Long id, User newUser) {
         User user = userRepository.findById(id).orElseThrow(() -> new UserNotFoundException(id));
-        return new ResponseEntity<>(user, HttpStatus.OK);
+        try {
+            if (newUser.getEmail() != null) {
+                user.setEmail(newUser.getEmail());
+            } else {
+                user.setEmail(user.getEmail());
+            }
+
+            if (newUser.getUsername() != null) {
+                user.setUsername(newUser.getUsername());
+            } else {
+                user.setUsername(user.getUsername());
+            }
+
+            return userRepository.save(user);
+        }catch(Exception e){
+            throw new UserUpdateException("Unable to update user with id "+id);
+        }
     }
 
-    public ResponseEntity<User> updateUser(Long id,User newUser) {
-        User user=userRepository.findById(id).orElseThrow(()->new UserNotFoundException(id));
-        if(newUser.getEmail()!=null){
-            user.setEmail(newUser.getEmail());
-        }else{
-            user.setEmail(user.getEmail());
-        }
-
-        if(newUser.getUsername()!=null){
-            user.setUsername(newUser.getUsername());
-        }else{
-            user.setUsername(user.getUsername());
-        }
-
-        return new ResponseEntity<>(userRepository.save(user),HttpStatus.OK);
-    }
-
-    public ResponseEntity<String> deleteUser(Long id) {
-        if(!userRepository.existsById(id)){
+    public String deleteUser(Long id) {
+        if (!userRepository.existsById(id)) {
             throw new UserNotFoundException(id);
         }
-        userRepository.deleteById(id);
-        return new ResponseEntity<>("Deleted successfully", HttpStatus.OK);
+        try {
+            userRepository.deleteById(id);
+            return "Deleted successfully";
+        }catch(Exception e){
+            throw new UserDeletionException("Unable to delete user with id "+id);
+        }
     }
 }
